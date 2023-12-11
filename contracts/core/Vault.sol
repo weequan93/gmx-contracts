@@ -567,7 +567,8 @@ contract Vault is ReentrancyGuard, IVault {
         _validateTokens(_collateralToken, _indexToken, _isLong);
         vaultUtils.validateIncreasePosition(_account, _collateralToken, _indexToken, _sizeDelta, _isLong);
 
-        updateCumulativeFundingRate(_collateralToken, _indexToken);
+        // ** no more funding rate
+        // updateCumulativeFundingRate(_collateralToken, _indexToken);
 
         bytes32 key = getPositionKey(_account, _collateralToken, _indexToken, _isLong);
         Position storage position = positions[key];
@@ -582,15 +583,18 @@ contract Vault is ReentrancyGuard, IVault {
             position.averagePrice = getNextAveragePrice(_indexToken, position.size, position.averagePrice, _isLong, price, _sizeDelta, position.lastIncreasedTime);
         }
 
+        // ** no more
         uint256 fee = _collectMarginFees(_account, _collateralToken, _indexToken, _isLong, _sizeDelta, position.size, position.entryFundingRate);
+        // ** here we watch on the usdt transferred in,not _collateralToken
         uint256 collateralDelta = _transferIn(_collateralToken);
+        // ** covert it by market price
         uint256 collateralDeltaUsd = tokenToUsdMin(_collateralToken, collateralDelta);
 
         position.collateral = position.collateral.add(collateralDeltaUsd);
         _validate(position.collateral >= fee, 29);
 
         position.collateral = position.collateral.sub(fee);
-        position.entryFundingRate = getEntryFundingRate(_collateralToken, _indexToken, _isLong);
+        // position.entryFundingRate = getEntryFundingRate(_collateralToken, _indexToken, _isLong);
         position.size = position.size.add(_sizeDelta);
         position.lastIncreasedTime = block.timestamp;
 
@@ -599,6 +603,9 @@ contract Vault is ReentrancyGuard, IVault {
         validateLiquidation(_account, _collateralToken, _indexToken, _isLong, true);
 
         // reserve tokens to pay profits on the position
+        // ** we are using thrid party pool, so that we no need reserve _collateralToken amount, but we need to reserve usdt amount, to confirm that the selling of the token in future have enough usdt to switch back
+        // ** possilbe to have scenario, the usdt is not sufficient
+        // ** here we reserve by usdt
         uint256 reserveDelta = usdToTokenMax(_collateralToken, _sizeDelta);
         position.reserveAmount = position.reserveAmount.add(reserveDelta);
         _increaseReservedAmount(_collateralToken, reserveDelta);
@@ -607,6 +614,7 @@ contract Vault is ReentrancyGuard, IVault {
             // guaranteedUsd stores the sum of (position.size - position.collateral) for all positions
             // if a fee is charged on the collateral then guaranteedUsd should be increased by that fee amount
             // since (position.size - position.collateral) would have increased by `fee`
+            // ** we are guarantee by usdt, should all use usdt instead
             _increaseGuaranteedUsd(_collateralToken, _sizeDelta.add(fee));
             _decreaseGuaranteedUsd(_collateralToken, collateralDeltaUsd);
             // treat the deposited collateral as part of the pool
@@ -1102,9 +1110,12 @@ contract Vault is ReentrancyGuard, IVault {
     function _collectMarginFees(address _account, address _collateralToken, address _indexToken, bool _isLong, uint256 _sizeDelta, uint256 _size, uint256 _entryFundingRate) private returns (uint256) {
         uint256 feeUsd = getPositionFee(_account, _collateralToken, _indexToken, _isLong, _sizeDelta);
 
-        uint256 fundingFee = getFundingFee(_account, _collateralToken, _indexToken, _isLong, _size, _entryFundingRate);
+
+        // ** no more funding fee
+        uint256 fundingFee =  0 // getFundingFee(_account, _collateralToken, _indexToken, _isLong, _size, _entryFundingRate);
         feeUsd = feeUsd.add(fundingFee);
 
+        // ** no _collateralToken, we use usdt instead
         uint256 feeTokens = usdToTokenMin(_collateralToken, feeUsd);
         feeReserves[_collateralToken] = feeReserves[_collateralToken].add(feeTokens);
 
@@ -1174,6 +1185,7 @@ contract Vault is ReentrancyGuard, IVault {
 
     function _increaseReservedAmount(address _token, uint256 _amount) private {
         reservedAmounts[_token] = reservedAmounts[_token].add(_amount);
+        // ** reservedAmounts need to be smaller than poolAmounts[_token]* current multiplier
         _validate(reservedAmounts[_token] <= poolAmounts[_token], 52);
         emit IncreaseReservedAmount(_token, _amount);
     }

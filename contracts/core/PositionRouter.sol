@@ -309,8 +309,9 @@ contract PositionRouter is BasePositionManager, IPositionRouter {
         bytes32 _referralCode,
         address _callbackTarget
     ) external payable nonReentrant returns (bytes32) {
-        require(_executionFee >= minExecutionFee, "fee");
-        require(msg.value == _executionFee, "val");
+        // ** we no need execution fee anymore
+        // require(_executionFee >= minExecutionFee, "fee");
+        // require(msg.value == _executionFee, "val");
         require(_path.length == 1 || _path.length == 2, "len");
 
         _transferInETH();
@@ -429,6 +430,7 @@ contract PositionRouter is BasePositionManager, IPositionRouter {
         delete increasePositionRequests[_key];
 
         if (request.amountIn > 0) {
+            // ** we should always make sure path[1] is always usdt
             uint256 amountIn = request.amountIn;
 
             if (request.path.length > 1) {
@@ -457,6 +459,9 @@ contract PositionRouter is BasePositionManager, IPositionRouter {
             block.number.sub(request.blockNumber),
             block.timestamp.sub(request.blockTime)
         );
+
+// sell order take profit
+// sell order stop loss
 
         _callRequestCallback(request.callbackTarget, _key, true, true);
 

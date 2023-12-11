@@ -62,7 +62,7 @@ contract VaultUtils is IVaultUtils, Governable {
         IVault _vault = vault;
 
         (bool hasProfit, uint256 delta) = _vault.getDelta(_indexToken, position.size, position.averagePrice, _isLong, position.lastIncreasedTime);
-        uint256 marginFees = getFundingFee(_account, _collateralToken, _indexToken, _isLong, position.size, position.entryFundingRate);
+        uint256 marginFees = 0 // ** getFundingFee(_account, _collateralToken, _indexToken, _isLong, position.size, position.entryFundingRate);
         marginFees = marginFees.add(getPositionFee(_account, _collateralToken, _indexToken, _isLong, position.size));
 
         if (!hasProfit && position.collateral < delta) {

@@ -600,17 +600,25 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
         bool _shouldWrap
     ) external payable nonReentrant {
         // always need this call because of mandatory executionFee user has to transfer in ETH
+
+        // ** we no need execution fee from now
         _transferInETH();
 
+        // ** we no need execution fee from now
         require(_executionFee >= minExecutionFee, "OrderBook: insufficient execution fee");
         if (_shouldWrap) {
             require(_path[0] == weth, "OrderBook: only weth could be wrapped");
+
+            // ** modify to msg.value == amountIn
             require(msg.value == _executionFee.add(_amountIn), "OrderBook: incorrect value transferred");
         } else {
+             // ** we no need execution fee from now
             require(msg.value == _executionFee, "OrderBook: incorrect execution fee transferred");
             IRouter(router).pluginTransfer(_path[0], msg.sender, address(this), _amountIn);
         }
 
+        // ** must modify so that purchase token always usdt
+        // ** if this is not usdt swap it /  always pass usdt into the last position of the path
         address _purchaseToken = _path[_path.length - 1];
         uint256 _purchaseTokenAmount;
         if (_path.length > 1) {
@@ -749,17 +757,21 @@ contract OrderBook is ReentrancyGuard, IOrderBook {
 
         IERC20(order.purchaseToken).safeTransfer(vault, order.purchaseTokenAmount);
 
-        if (order.purchaseToken != order.collateralToken) {
-            address[] memory path = new address[](2);
-            path[0] = order.purchaseToken;
-            path[1] = order.collateralToken;
+        // ** at here purchaseToken must be usdt
+        // ** collateralToken could be not usdt, but we wanted it to keep using usdt to be the colleteral
 
-            uint256 amountOut = _swap(path, 0, address(this));
-            IERC20(order.collateralToken).safeTransfer(vault, amountOut);
-        }
+        // if (order.purchaseToken != order.collateralToken) {
+        //     address[] memory path = new address[](2);
+        //     path[0] = order.purchaseToken;
+        //     path[1] = order.collateralToken;
+
+        //     uint256 amountOut = _swap(path, 0, address(this));
+        //     IERC20(order.collateralToken).safeTransfer(vault, amountOut);
+        // }
 
         IRouter(router).pluginIncreasePosition(order.account, order.collateralToken, order.indexToken, order.sizeDelta, order.isLong);
 
+        // ** we no need to pay executor anymore
         // pay executor
         _transferOutETH(order.executionFee, _feeReceiver);
 

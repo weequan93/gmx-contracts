@@ -182,6 +182,7 @@ contract BasePositionManager is IBasePositionManager, ReentrancyGuard, Governabl
     }
 
     function _increasePosition(address _account, address _collateralToken, address _indexToken, uint256 _sizeDelta, bool _isLong, uint256 _price) internal {
+        // ** this can limit single direction opening
         _validateMaxGlobalSize(_indexToken, _isLong, _sizeDelta);
 
         PositionUtils.increasePosition(

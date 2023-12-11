@@ -75,6 +75,7 @@ library PositionUtils {
         address timelock = IVault(_vault).gov();
 
         // should be called strictly before position is updated in Vault
+        // ** make sure colleteral always usdt
         IShortsTracker(_shortsTracker).updateGlobalShortData(_account, _collateralToken, _indexToken, _isLong, _sizeDelta, markPrice, true);
 
         ITimelock(timelock).enableLeverage(_vault);
